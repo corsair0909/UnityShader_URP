@@ -3,6 +3,8 @@ Shader "Unlit/UnlitShader"
     Properties
     {
         _MainTex ("Texture", 2D) = "white" {}
+        _NormalTex ("NormalTex",2D) = "White"{}
+        _NormalScale ("Scale",float) = 0.2
         _BaseColor ("BaseColor",color) = (1,1,1,1)
         _SpecColor ("SpecColor",color) = (1,1,1,1)
         _SpecPower("Gloss",float) = 70
@@ -44,6 +46,7 @@ Shader "Unlit/UnlitShader"
         half4 _SpecColor;
         half _SpecPower;
         half _Cutoff;
+        half _NormalScale;
         CBUFFER_END
         
         ENDHLSL
@@ -60,11 +63,15 @@ Shader "Unlit/UnlitShader"
                 float4 vertex   : POSITION;
                 float2 uv       : TEXCOORD0;
                 float3 normal   : NORMAL;
+                float4 tangent  : TANGENT;
             };
 
             //新的采样函数和采样器，替代 CG中的 Sample2D
             TEXTURE2D(_MainTex);
             SAMPLER(sampler_MainTex);
+
+            TEXTURE2D(_NormalTex);
+            SAMPLER(sampler_NormalTex);
             
             struct Varing //新的命名习惯 v2f
             {
@@ -73,6 +80,8 @@ Shader "Unlit/UnlitShader"
                 float3 ViewWS       : TEXCOORD1;
                 float3 NormalWS     : TEXCOORD2;
                 float3 WorldPos     : TEXCOORD4;
+                float4 TangentWS    : TEXCOORD5;
+                float3 BTangentWS   : TEXCOORD6;
                 //float3 VertexLight  : TEXCOORD3;
             };
             
@@ -89,11 +98,16 @@ Shader "Unlit/UnlitShader"
 
                 //o.NormalWS = TransformObjectToWorldNormal(v.normal);
                 VertexNormalInputs NorInput = GetVertexNormalInputs(v.normal);
-                o.NormalWS = NorInput.normalWS;
+                o.NormalWS = normalize(NorInput.normalWS);
 
                 o.ViewWS = GetCameraPositionWS() - PosInput.positionWS;
                 
                 o.uv = TRANSFORM_TEX(v.uv, _MainTex);//uv的获取方式不变
+
+                o.TangentWS.xyz = normalize(TransformObjectToWorld(v.tangent));
+
+                //unity_WorldTransformParams 是为判断是否使用了奇数相反的缩放
+                o.BTangentWS = normalize(cross(o.NormalWS,o.TangentWS.xyz) * v.tangent.w * unity_WorldTransformParams.w);
 
                 //o.VertexLight = VertexLighting(PosInput.positionWS,NorInput.normalWS);
                 
@@ -102,9 +116,20 @@ Shader "Unlit/UnlitShader"
 
             float4 frag (Varing i) : SV_Target
             {
+                half3x3 TBN = half3x3(i.TangentWS.xyz,i.BTangentWS.xyz,i.NormalWS.xyz);
+                
                 half4 col1 = SAMPLE_TEXTURE2D(_MainTex,sampler_MainTex,i.uv);
                 //half4 col2 = SAMPLE_TEXTURE2D_LOD(_MainTex,sampler_MainTex,i.uv,0);
-                half3 NdirWS = normalize(i.NormalWS);
+                
+                //half3 NdirWS = normalize(i.NormalWS);
+                //TBN矩阵转换切线空间法线
+                half4 var_Normal = SAMPLE_TEXTURE2D(_NormalTex,sampler_NormalTex,i.uv);
+                half3 NdirTS = UnpackNormalScale(var_Normal,_NormalScale);
+                //NdirTS.z = pow((1-pow(NdirTS.x,2)-1-pow(NdirTS.y,2)),0.5);
+                NdirTS.z = sqrt(1-saturate(dot(NdirTS.xy,NdirTS.xy))); //规范化法线
+                half3 NdirWS = mul(NdirTS,TBN); // 右乘TBN = 左乘TBN的逆矩阵
+
+                    
                 //Lighting.hlsl中获取主光的方法。
                 //Light结构体中包含了灯光的方向、颜色、距离衰减系数、阴影衰减系数
                 Light light = GetMainLight();
@@ -115,8 +140,10 @@ Shader "Unlit/UnlitShader"
                 
                 //half3 diffuse = _BaseColor.rgb * col1.rgb * LightingLambert(LightCol,LdirWS,NdirWS);
                 float LightAten = saturate(dot(LdirWS,NdirWS)) * 0.5f + 0.5;
-                half3 diffuse = _BaseColor.rgb * col1.rgb * LightAten;
-                half3 specular  = LightingSpecular(LightCol,LdirWS,NdirWS,VdirWS,_SpecColor,_SpecPower);
+
+                //real HLSL中的数据类型，根据不同平台被编译成float或fixed
+                real3 diffuse = _BaseColor.rgb * col1.rgb * LightAten;
+                real3 specular  = LightingSpecular(LightCol,LdirWS,NdirWS,VdirWS,_SpecColor,_SpecPower);
 
                 //计算其他光源
                  uint lighCount = GetAdditionalLightsCount();//获取能够影响到这个片段的其他光源的数量
