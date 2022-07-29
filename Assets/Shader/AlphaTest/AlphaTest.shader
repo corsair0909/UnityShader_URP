@@ -18,34 +18,29 @@ Shader "Unlit/Unit2/AlphaTest"
     }
     SubShader
     {
-        //URP不再支持多个渲染Pass
-        //渲染Pass ：LightMode = UniversalForward，只能有一个，负责渲染，输出到帧缓存中
-        //投影Pass ：LightMode = ShadowCaster，用于计算投影
-        //深度Pass ：LightMode = DepthOnly 如果管线设置了生成深度图，会通过这个Pass渲染出来
-        //其他Pass ：用于烘焙
+
         
         
         Tags { 
-                // URP 管线的shader需要标明使用的渲染管线标签，让管线识别到
+                
                 "RenderPipeLine"="UniversalRenderPipeLine" 
                 "Queue" = "Geometry"
                 "RenderType"="Opaque"
+                "IgnoreProjector"="True"
              }
         
         
-        // 引入由CGINCLUDE变为 HLSLINCLUDE
+
         HLSLINCLUDE
 
         
-        //CGUnity.cginc包含文件 改为如下文件
+
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
-        //该文件包含了光照信息和简单的光照计算函数，甚至PBR相关功能的函数
+
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
         
-        //适合存放float，half等不占内存的数据类型
-        //为了支持SRP Batcher,常量缓冲区，应将除了贴图数据之外的全部属性都包含在内
-        //且为了保证后面的Pass都有一样的属性，需要将缓冲区申明在SubShader中
+
         CBUFFER_START(UnityProperties)
         float4 _MainTex_ST;
         float4 _NoiseTex_ST;
@@ -61,7 +56,7 @@ Shader "Unlit/Unit2/AlphaTest"
         half _LineWidth;
         CBUFFER_END
 
-                    //新的采样函数和采样器，替代 CG中的 Sample2D
+                    
         TEXTURE2D(_MainTex);
         SAMPLER(sampler_MainTex);
 
@@ -80,7 +75,7 @@ Shader "Unlit/Unit2/AlphaTest"
             #pragma vertex vert
             #pragma fragment frag
 
-            struct Attributes//新的命名习惯，a2v
+            struct Attributes
             {
                 float4 vertex   : POSITION;
                 float2 uv       : TEXCOORD0;
@@ -90,7 +85,7 @@ Shader "Unlit/Unit2/AlphaTest"
 
 
             
-            struct Varing //新的命名习惯 v2f
+            struct Varing 
             {
                 float2 uv           : TEXCOORD0;
                 float4 vertex       : SV_POSITION;

@@ -1,4 +1,4 @@
-Shader "Unlit/URPTemplateShader"
+Shader "Unlit/AlphaBlend"
 {
     Properties
     {
