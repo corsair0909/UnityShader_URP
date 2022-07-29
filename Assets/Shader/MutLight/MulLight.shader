@@ -10,9 +10,17 @@ Shader "Unlit/URPTemplateShader"
         _SpecColor ("SpecColor",color) = (1,1,1,1)
         _SpecPower("Gloss",float) = 70
         
-        //[Enum(UnityEngine.Render.BlendOP)]_BlendOP ("BlendOP",float) = 0
-//        [Enum(UnityEngine.Render.BlendMode)]_BlendMode1 ("BlendMode1",int) = 0
-//        [Enum(UnityEngine.Render.BlendMode)]_BlendMode2 ("BlendMode2",int) = 0
+        [Space(5)]
+        [Header(AddLighting)]
+        [KeywordEnum(ON,OFF)] _ADD_LIGHT ("MultLight",float) = 1
+        
+        
+//        [Space(15)]
+//        [Header(Blend Mode)]
+//        [Enum(UnityEngine.Rendering.BlendOp)] _BlendOp("BlendOp",float) = 1
+//        [Enum(UnityEngine.Rendering.BlendMode)] _SrcBlend("SrcBlend",float) = 1
+//        [Enum(UnityEngine.Rendering.BlendMode)] _DesBlend("DesBlend",float) = 1
+        
     }
     SubShader
     {
@@ -78,16 +86,24 @@ Shader "Unlit/URPTemplateShader"
             float3 BTangentWS   : TEXCOORD6;
         };
         
+        
         ENDHLSL
 
         Pass
         {
             
             Tags{"LightMode"="UniversalForward"}
+            //Blend [_SrcBlend] [_DesBlend]
             HLSLPROGRAM
             
             #pragma vertex vert
             #pragma fragment frag
+
+            //TODO 解决阴影问题
+            // #pragma multi_compile _ _MAIN_LIGHT_SHADOWS
+            // #pragma multi_compile _ _MAIN_LIGHT_SHADOWS_CASCADE
+            
+            #pragma shader_feature _ADD_LIGHT_ON _ADD_LIGHT_OFF //shader feature
             
             Varing vert (Attributes v)
             {
@@ -120,7 +136,7 @@ Shader "Unlit/URPTemplateShader"
 
             float4 frag (Varing i) : SV_Target
             {
-                half3x3 TBN = half3x3(i.TangentWS.xyz,i.BTangentWS.xyz,i.NormalWS.xyz);
+                //half3x3 TBN = half3x3(i.TangentWS.xyz,i.BTangentWS.xyz,i.NormalWS.xyz);
                 
                 half4 col1 = SAMPLE_TEXTURE2D(_MainTex,sampler_MainTex,i.uv);
                 //half4 col2 = SAMPLE_TEXTURE2D_LOD(_MainTex,sampler_MainTex,i.uv,0);
@@ -152,19 +168,33 @@ Shader "Unlit/URPTemplateShader"
                 real3 specular  = LightingSpecular(LightCol,LdirWS,NdirWS,VdirWS,_SpecColor,_SpecPower);
 
                 //计算其他光源
+                #if _ADD_LIGHT_ON
+                 float3 MutLight =float3(0,0,0); 
                  uint lighCount = GetAdditionalLightsCount();//获取能够影响到这个片段的其他光源的数量
                  for (int it = 0; it < lighCount; ++it)
                  {
                      Light pixelLit = GetAdditionalLight(it,i.WorldPos);//根据索引和片段的位置坐标计算光照，将结果存储在Light结构体中
+                     float3 LDirWS = normalize(pixelLit.direction);
                      //不要忽略距离衰减因子
-                     diffuse += LightingLambert(pixelLit.color,pixelLit.direction,NdirWS) * pixelLit.distanceAttenuation;
-                     specular += LightingSpecular(pixelLit.color,LdirWS,NdirWS,VdirWS,_SpecColor,_SpecPower) *
-                         pixelLit.distanceAttenuation;
+                     MutLight += LightingLambert(pixelLit.color,LDirWS,NdirWS) * pixelLit.distanceAttenuation;
                  }
-                float3 finalColor = diffuse+specular;
+                #else
+                 float3 MutLight = float3(0,0,0);
+                #endif
+
+
+                //产生阴影的方法
+                //需要定义 上面两个宏才可以生效
+                // float4 ShadowCoord = TransformWorldToShadowCoord(i.WorldPos);//计算坐标在shadowMap中的位置
+                // Light shadowLight = GetMainLight(ShadowCoord);//阴影空间下的灯光
+                // half shadow = MainLightRealtimeShadow(ShadowCoord);
+                
+                float3 finalColor = diffuse+specular+MutLight.rgb;
                 return float4 (finalColor,1);
             }
             ENDHLSL
         }
+        //投射阴影
+        UsePass "Universal Render Pipeline/Lit/ShadowCaster"
     }
 }
