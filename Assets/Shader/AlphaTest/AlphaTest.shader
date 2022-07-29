@@ -8,8 +8,13 @@ Shader "Unlit/Unit2/AlphaTest"
         _NormalScale ("Scale",float) = 0.2
         _BaseColor ("BaseColor",color) = (1,1,1,1)
         _SpecColor ("SpecColor",color) = (1,1,1,1)
+        
+        _LineWidth ("Linewidth",float) = 0.01
+        [HDR]_BurnColor1 ("BurnColor1",color) = (1,1,1,1)
+        [HDR]_BurnColor2 ("BurnColor2",color) = (1,1,1,1)
+        
         _SpecPower("Gloss",float) = 70
-        _Cutoff("Cutoff",float)=0.5
+        _Cutoff("Cutoff",range(0,1))=0.5
     }
     SubShader
     {
@@ -43,12 +48,28 @@ Shader "Unlit/Unit2/AlphaTest"
         //且为了保证后面的Pass都有一样的属性，需要将缓冲区申明在SubShader中
         CBUFFER_START(UnityProperties)
         float4 _MainTex_ST;
+        float4 _NoiseTex_ST;
+        float4 _NormalTex_ST;
+        float4 _BaseMap_ST;
         half4 _BaseColor;
         half4 _SpecColor;
+        real4 _BurnColor1;
+        real4 _BurnColor2;
         half _SpecPower;
         half _Cutoff;
         half _NormalScale;
+        half _LineWidth;
         CBUFFER_END
+
+                    //新的采样函数和采样器，替代 CG中的 Sample2D
+        TEXTURE2D(_MainTex);
+        SAMPLER(sampler_MainTex);
+
+        TEXTURE2D(_NormalTex);
+        SAMPLER(sampler_NormalTex);
+
+        TEXTURE2D(_NoiseTex);
+        SAMPLER(sampler_NoiseTex);
         
         ENDHLSL
 
@@ -67,15 +88,7 @@ Shader "Unlit/Unit2/AlphaTest"
                 float4 tangent  : TANGENT;
             };
 
-            //新的采样函数和采样器，替代 CG中的 Sample2D
-            TEXTURE2D(_MainTex);
-            SAMPLER(sampler_MainTex);
 
-            TEXTURE2D(_NormalTex);
-            SAMPLER(sampler_NormalTex);
-
-            TEXTURE2D(_NoiseTex);
-            SAMPLER(sampler_NoiseTex);
             
             struct Varing //新的命名习惯 v2f
             {
@@ -161,10 +174,15 @@ Shader "Unlit/Unit2/AlphaTest"
                      specular += LightingSpecular(pixelLit.color,LdirWS,NdirWS,VdirWS,_SpecColor,_SpecPower) *
                          pixelLit.distanceAttenuation;
                  }
+                float3 finalColor = diffuse+specular;
+                clip(step(_Cutoff,noise.r) - 0.01);
 
-                //clip(step(_Cutoff,noise.r) - 0.01);
-                return noise;
-                //return float4 (diffuse+specular,1);
+                //Noise - Cutoff的值越大说明该片元还没有被消融
+                //edge值越小越靠近边缘
+                float edge = 1 - smoothstep(0.0,_LineWidth,noise.r - _Cutoff);
+                real4 BurnColor = lerp(_BurnColor1,_BurnColor2,edge);
+                finalColor = lerp(finalColor,BurnColor,step(noise.r,saturate(_Cutoff+0.01)));
+                return float4 (finalColor,1);
             }
             ENDHLSL
         }

@@ -125,11 +125,11 @@ Shader "Unlit/UnlitShader"
                 //TBN矩阵转换切线空间法线
                 half4 var_Normal = SAMPLE_TEXTURE2D(_NormalTex,sampler_NormalTex,i.uv);
                 half3 NdirTS = UnpackNormalScale(var_Normal,_NormalScale);
+                
                 //NdirTS.z = pow((1-pow(NdirTS.x,2)-1-pow(NdirTS.y,2)),0.5);
                 NdirTS.z = sqrt(1-saturate(dot(NdirTS.xy,NdirTS.xy))); //规范化法线
                 half3 NdirWS = mul(NdirTS,TBN); // 右乘TBN = 左乘TBN的逆矩阵
-
-                    
+                
                 //Lighting.hlsl中获取主光的方法。
                 //Light结构体中包含了灯光的方向、颜色、距离衰减系数、阴影衰减系数
                 Light light = GetMainLight();

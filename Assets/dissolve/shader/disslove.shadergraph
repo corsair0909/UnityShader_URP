@@ -506,8 +506,8 @@
         "m_Expanded": true,
         "m_Position": {
             "serializedVersion": "2",
-            "x": -1656.799072265625,
-            "y": 440.7545166015625,
+            "x": -1679.5,
+            "y": 441.0000305175781,
             "width": 125.0,
             "height": 118.0
         }
@@ -573,10 +573,10 @@
         "m_Expanded": true,
         "m_Position": {
             "serializedVersion": "2",
-            "x": -2246.0,
-            "y": 839.0,
-            "width": 232.0,
-            "height": 146.0
+            "x": -2072.0,
+            "y": 692.0,
+            "width": 126.5,
+            "height": 34.0
         }
     },
     "m_Slots": [
@@ -1508,10 +1508,10 @@
         "m_Expanded": true,
         "m_Position": {
             "serializedVersion": "2",
-            "x": -2130.0,
-            "y": 559.0000610351563,
-            "width": 232.0,
-            "height": 146.0
+            "x": -2095.0,
+            "y": 559.0,
+            "width": 182.5,
+            "height": 34.0
         }
     },
     "m_Slots": [
@@ -1774,10 +1774,10 @@
         "m_Expanded": true,
         "m_Position": {
             "serializedVersion": "2",
-            "x": -902.0,
-            "y": 652.0,
-            "width": 184.0,
-            "height": 33.99993896484375
+            "x": -803.0,
+            "y": 654.5,
+            "width": 186.5,
+            "height": 34.0
         }
     },
     "m_Slots": [
@@ -2801,7 +2801,7 @@
         "m_Expanded": true,
         "m_Position": {
             "serializedVersion": "2",
-            "x": -459.0,
+            "x": -447.0000915527344,
             "y": 593.0,
             "width": 208.0,
             "height": 302.0
@@ -2843,10 +2843,10 @@
         "m_Expanded": true,
         "m_Position": {
             "serializedVersion": "2",
-            "x": -2236.0,
-            "y": 282.0,
-            "width": 130.0,
-            "height": 114.0
+            "x": -2139.5,
+            "y": 178.5,
+            "width": 135.5,
+            "height": 34.0
         }
     },
     "m_Slots": [
