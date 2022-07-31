@@ -100,8 +100,10 @@ Shader "Unlit/URPTemplateShader"
             #pragma fragment frag
 
             //TODO 解决阴影问题
-            // #pragma multi_compile _ _MAIN_LIGHT_SHADOWS
-            // #pragma multi_compile _ _MAIN_LIGHT_SHADOWS_CASCADE
+			// #pragma multi_compile  _MAIN_LIGHT_SHADOWS
+			// #pragma multi_compile  _MAIN_LIGHT_SHADOWS_CASCADE
+			// #pragma multi_compile  _SHADOWS_SOFT
+
             
             #pragma shader_feature _ADD_LIGHT_ON _ADD_LIGHT_OFF //shader feature
             
@@ -130,7 +132,7 @@ Shader "Unlit/URPTemplateShader"
                 o.BTangentWS = normalize(cross(o.NormalWS,o.TangentWS.xyz) * v.tangent.w * unity_WorldTransformParams.w);
 
                 //o.VertexLight = VertexLighting(PosInput.positionWS,NorInput.normalWS);
-                
+
                 return o;
             }
 
@@ -149,12 +151,19 @@ Shader "Unlit/URPTemplateShader"
                 //NdirTS.z = pow((1-pow(NdirTS.x,2)-1-pow(NdirTS.y,2)),0.5);
                  // NdirTS.z = sqrt(1-saturate(dot(NdirTS.xy,NdirTS.xy))); //规范化法线
                  // half3 NdirWS = mul(NdirTS,TBN); // 右乘TBN = 左乘TBN的逆矩阵
+                
 
-                //half4 noise = SAMPLE_TEXTURE2D(_NoiseTex,sampler_NoiseTex,i.uv);
+                //产生阴影的方法
+                //需要定义 上面两个宏才可以生效
+                float4 ShadowCoord = TransformWorldToShadowCoord(i.WorldPos);
+                //Light shadowLight = GetMainLight(ShadowCoord);//阴影空间下的灯光
+                
                 
                 //Lighting.hlsl中获取主光的方法。
                 //Light结构体中包含了灯光的方向、颜色、距离衰减系数、阴影衰减系数
-                Light light = GetMainLight();
+                Light light = GetMainLight(ShadowCoord);
+                half shadow = light.shadowAttenuation;
+                
                 float3 LdirWS = normalize(light.direction);
                 float3 LightCol = light.color;
                 float3 VdirWS = normalize(i.ViewWS);
@@ -164,7 +173,7 @@ Shader "Unlit/URPTemplateShader"
                 float NdotL = saturate(dot(LdirWS,NdirWS)) * 0.5f + 0.5;
 
                 //real HLSL中的数据类型，根据不同平台被编译成float或fixed
-                real3 diffuse = _Color.rgb * col1.rgb * NdotL;
+                real3 diffuse = _Color.rgb * col1.rgb * NdotL * LightCol * shadow;
                 real3 specular  = LightingSpecular(LightCol,LdirWS,NdirWS,VdirWS,_SpecColor,_SpecPower);
 
                 //计算其他光源
@@ -183,12 +192,6 @@ Shader "Unlit/URPTemplateShader"
                 #endif
 
 
-                //产生阴影的方法
-                //需要定义 上面两个宏才可以生效
-                // float4 ShadowCoord = TransformWorldToShadowCoord(i.WorldPos);//计算坐标在shadowMap中的位置
-                // Light shadowLight = GetMainLight(ShadowCoord);//阴影空间下的灯光
-                // half shadow = MainLightRealtimeShadow(ShadowCoord);
-                
                 float3 finalColor = diffuse+specular+MutLight.rgb;
                 return float4 (finalColor,1);
             }
