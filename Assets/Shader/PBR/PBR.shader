@@ -9,11 +9,13 @@ Shader "Unlit/PBR"
         _MetalicTex ("MetalicTex",2D) = "Black"{}
         _AOTex("AOTex",2D) = "white"{}
         _LUT ("LUT",2D) = "White"{}
+        _SkyBox ("SkyBox",Cube) = "White"{}
         
         [Space(5)]
         [Header(Parameter)]
         _LightColor ("LightColor",color) = (1,1,1,1)
-        _Smoothness("Smoothness",range(0,0.999)) = 0.1
+        _Smoothness("Smoothness",range(0,2)) = 0.1
+        _Metalic("Metalic",range(0,1)) = 0
         
     }
     SubShader
@@ -46,6 +48,7 @@ Shader "Unlit/PBR"
         float4 _LightColor;
         float _NormalScale;
         float _Smoothness;
+        float _Metalic;
         CBUFFER_END
         
         //新的采样函数和采样器，替代 CG中的 Sample2D
@@ -63,6 +66,9 @@ Shader "Unlit/PBR"
 
         TEXTURE2D(_LUT);
         SAMPLER(sampler_LUT);
+
+        TEXTURECUBE(_SkyBox);
+        SAMPLER(sampler_SkyBox);
 
         struct Attributes//新的命名习惯，a2v
         {
@@ -85,18 +91,23 @@ Shader "Unlit/PBR"
         #define PI      3.1416926
         #define INV_PI      0.31830988618379067154
 
-        half  CustomDisneyDiffuse(half NdotV,half NdotL,half LdotV,half Roughness)
+        half  CustomDisneyDiffuse(half NdotV,half NdotL,half LdotH,half Roughness)
         {
-            half F90 = 0.5f + 2*Roughness * LdotV;
+            //TODO 修改F90的计算方式
+            half F90 = 0.5f + 2*Roughness * LdotH * LdotH;
             half lightScatter = (1+(F90-1)*pow(1-NdotL,5));
             half viewScatter = (1+(F90-1)*pow(1-NdotV,5));
-            return lightScatter * viewScatter;
+            return INV_PI * lightScatter * viewScatter;
         }
+
+        //Roughness2
         half NDF(half NdotH,half Roughness)
         {
-            half NdotH2 = NdotH * NdotH;
+            half NH = max(NdotH,0.0);
+            half NdotH2 = NH * NH;
             half Rough = Roughness - 1;
             half denominator = (NdotH2 * Rough) + 1;
+            denominator = max(denominator,0.0001);
             return INV_PI * Roughness / pow(denominator,2);
 
             // float a2 = pow(lerp(0.002, 1, Roughness), 2);
@@ -120,13 +131,14 @@ Shader "Unlit/PBR"
             half GGXIBLLdir = GGX_Smith(NdotL,KIBL);
             half GGXIBLVdir = GGX_Smith(NdotV,KIBL);
 
-            return GGXInLdir * GGXInVdir;
+            return GGXInLdir * GGXInVdir + GGXIBLLdir*GGXIBLVdir;
             
         }
         half3 FresnelShlick(half3 F0,half VdotH)
         {
-            half Exp = (1-F0) * exp2((-5.55473 * VdotH - 6.98316) * VdotH);
-            return F0+Exp;
+            //half Exp = (1-F0) * exp2((-5.55473 * VdotH - 6.98316) * VdotH);
+            //return F0+Exp;
+            return F0+(1-F0) * pow(1-VdotH,5);
         }
 
         float3 IBLDiffuseLight(float Ndir)
@@ -146,17 +158,38 @@ Shader "Unlit/PBR"
 
         float3 IBLSpecularLight(float3 VDir,float3 NDir,half rough)
         {
-            half Roughness = rough*(1-rough);
+            half Roughness = rough*(1.7-0.7 * rough);
             float3 ReDirWS = reflect(-VDir,NDir);
-            half MipValue = Roughness * 6;
-            float4 SpecColor = SAMPLE_TEXTURECUBE_LOD(unity_SpecCube0,samplerunity_SpecCube0,ReDirWS,MipValue);
+            half MipValue = Roughness * 10;
+            float4 SpecColor = SAMPLE_TEXTURECUBE_LOD(_SkyBox,sampler_SkyBox,ReDirWS,MipValue);
             return DecodeHDREnvironment(SpecColor,unity_SpecCube0_HDR);
         }
 
         float3 fresnelSchlickRoughness(float cosTheta, float3 F0, float roughness)
         {
-            return F0 + (max(float3(1.0 - roughness, 1.0 - roughness, 1.0 - roughness), F0) - F0) * pow(1.0 - cosTheta, 5.0);
+            //TODO 修改了间接光菲涅尔项
+            float3 oneminus = 1-roughness;
+            return F0 + (max(oneminus,F0)-F0) * pow(1-cosTheta,5);
         }
+
+
+
+        // TODO 使命召唤黑色行动2使用的间接光数值模拟方式
+        float2 EnvBRDFApprox(float Roughness, float NoV)
+            {
+                // [ Lazarov 2013, "Getting More Physical in Call of Duty: Black Ops II" ]
+                // Adaptation to fit our G term.
+                const float4 c0 = {
+                    - 1, -0.0275, -0.572, 0.022
+                };
+                const float4 c1 = {
+                    1, 0.0425, 1.04, -0.04
+                };
+                float4 r = Roughness * c0 + c1;
+                float a004 = min(r.x * r.x, exp2(-9.28 * NoV)) * r.x + r.y;
+                float2 AB = float2(-1.04, 1.04) * a004 + r.zw;
+                return AB;
+            }
         
         ENDHLSL
 
@@ -187,76 +220,76 @@ Shader "Unlit/PBR"
 
             float4 frag (Varing i) : SV_Target
             {
-                // float3x3 TBN = float3x3(i.TangentWS,i.BTangentWS,i.NormalWS);
-                // float4 Var_Normal = SAMPLE_TEXTURE2D(_NormalTex,sampler_NormalTex,i.uv);
+                float3x3 TBN = float3x3(i.TangentWS,i.BTangentWS,i.NormalWS);
+                float4 Var_Normal = SAMPLE_TEXTURE2D(_NormalTex,sampler_NormalTex,i.uv);
                 // float3 Ndir = UnpackNormalScale(Var_Normal,_NormalScale);
                 // float3 NdirWS = mul(Ndir,TBN);
+                
+                float3 NdirWS = UnpackNormal(Var_Normal);//Normal变量还在切线空间下，需要映射之后才能用
+                NdirWS.xy *=  _NormalScale;
+                NdirWS.z = sqrt(1-saturate(dot(NdirWS.xy,NdirWS.xy)));
+                NdirWS = mul(NdirWS,TBN);
                 Light MainLight = GetMainLight();
 
-                float3 NdirWS = normalize(i.NormalWS);
+                //float3 NdirWS = normalize(i.NormalWS);
                 float LDirWS = normalize(MainLight.direction);
-                float VDirWS = normalize(_WorldSpaceCameraPos.xyz);
+                float VDirWS = normalize(GetCameraPositionWS());
                 
-                float Var_Metalic = SAMPLE_TEXTURE2D(_NormalTex,sampler_NormalTex,i.uv).r;
-                float Var_Ao = SAMPLE_TEXTURE2D(_NormalTex,sampler_NormalTex,i.uv).r;
-                float4 Var_MainTex = SAMPLE_TEXTURE2D(_NormalTex,sampler_NormalTex,i.uv) * _LightColor;
-
-                float NdotV = saturate(dot(NdirWS,VDirWS));
-                float NdotL = saturate(dot(NdirWS,LDirWS));
+                float Var_Metalic = SAMPLE_TEXTURE2D(_MetalicTex,sampler_MetalicTex,i.uv).r * _Metalic;
+                float Var_Ao = SAMPLE_TEXTURE2D(_AOTex,sampler_AOTex,i.uv).r;
+                float4 Var_MainTex = SAMPLE_TEXTURE2D(_MainTex,sampler_MainTex,i.uv) * _LightColor;
                 float HdirWS = normalize(LDirWS+VDirWS);
-                float LdotV = saturate(dot(LDirWS,VDirWS));
+                float NdotV = max(0.01,dot(NdirWS,VDirWS));
+                float NdotL = saturate(dot(NdirWS,LDirWS));
+                
+                //float LdotV = saturate(dot(LDirWS,VDirWS));
                 float NdotH = saturate(dot(NdirWS,HdirWS));
                 float VdotH = saturate(dot(VDirWS,HdirWS));
+                float LdotH = saturate(dot(LDirWS,HdirWS));
 
-                float perceptualRoughness = 1 - _Smoothness;//粗糙度 = 1-光滑度
+                float perceptualRoughness = SAMPLE_TEXTURE2D(_MetalicTex,sampler_MetalicTex,i.uv).a * _Smoothness;//粗糙度 = 1-光滑度
+                perceptualRoughness = max(perceptualRoughness,0.002);
                 float roughness = perceptualRoughness * perceptualRoughness;
-                float squareRoughness = roughness * roughness;
-                float DiffuseResult = CustomDisneyDiffuse(NdotV,NdotL,LdotV,perceptualRoughness);
-                                //DisneyDiffuse(NdotV,NdotL,LdotH,perceptualRoughness);
-                //float3 DiffuseResult = Diffuse * Var_MainTex.rgb * MainLight.color/ PI ;
+                float DiffuseResult =  CustomDisneyDiffuse(NdotV,NdotL,LdotH,roughness);//DisneyDiffuse(NdotV,NdotL,LdotV,perceptualRoughness);
                 
-                float N = NDF(NdotH,perceptualRoughness);
+                float N = NDF(NdotH,roughness);
                 float G = GGX_SmithGeometry(NdotL,NdotV,perceptualRoughness,roughness);
-                float F0 = lerp(float3(0.4,0.4,0.4),Var_MainTex.rgb,Var_Metalic);
+                //TODO F0 = 0.04 - albedo 金属度插值
+                float F0 = lerp(float3(0.04,0.04,0.04),Var_MainTex.rgb,Var_Metalic);
                 float3 F = FresnelShlick(F0,VdotH);
                 float DGF = N*G*F;
                 float Specular = (DGF * 0.25) / NdotV * NdotL;
-                float3 SpecularResult = Specular * MainLight.color * NdotL;
-
-                float3 kd = OneMinusReflectivityMetallic(Var_Metalic);
-                float3 DiffuseColor = kd * DiffuseResult * MainLight.color * NdotL * Var_MainTex.rgb;
+                float3 SpecularResult = Specular ;
+                
+                //TODO 修改Kd漫反射比例计算方式
+                float ks = F;
+                float kd = 1-ks;
+                kd *= (1-Var_Metalic);
+                float3 DiffuseColor = kd * DiffuseResult * Var_MainTex.rgb ;
 
                 //直接光照部分 = 直接光漫反射+直接光镜面反射
-                float3 InDirectorLight = DiffuseColor+SpecularResult;
+                float3 InDirectorLight = (DiffuseColor+SpecularResult)* MainLight.color  * NdotL ;
 
                 //间接光漫反射部分
-
-                //float2 envBDRF = tex2D(_LUT, float2(lerp(0, 0.99, NdotV), lerp(0, 0.99, roughness))).rg;
-                float2 envBRDF = SAMPLE_TEXTURE2D(_LUT,sampler_LUT,float2(lerp(0,0.99,NdotV),lerp(0,0.99,NdotV))).rg;
+                //float2 envBRDF = SAMPLE_TEXTURE2D(_LUT,sampler_LUT,float2(lerp(0,0.99,NdotV),lerp(0,0.99,NdotV))).rg;
+                float2 envBRDF = EnvBRDFApprox(roughness,NdotV);
+                
                 float3 ambientSH = IBLDiffuseLight(NdirWS);
-                float3 ambient = 0.3 * Var_MainTex.rgb;
+                float3 ambient = float3(unity_SHAr.w,unity_SHAg.w,unity_SHAb.w)* 0.3 * Var_MainTex.rgb;
                 float3 IBLDiffuse = max(float3(0,0,0),ambient+ambientSH);
-
-
-                float3 IBLSpecular = IBLSpecularLight(VDirWS,NdirWS,perceptualRoughness) * Var_Ao;
-
-                // float surfaceReduction = 1.0 / (roughness*roughness + 1.0); //Liner空间
-                // //float surfaceReduction = 1.0 - 0.28*roughness*perceptualRoughness;  //Gamma空间
-                // float oneMinusReflectivity = 1 - max(max(SpecularResult.r, SpecularResult.g), SpecularResult.b);
-                // float grazingTerm = saturate(_Smoothness + (1 - oneMinusReflectivity));
+                
+                float3 IBLSpecular = IBLSpecularLight(VDirWS,NdirWS,perceptualRoughness) * 0.2f;
 
                 float Flast = fresnelSchlickRoughness(NdotV,F0,roughness);
                 float KdLast = (1-Flast) * (1-Var_Metalic);
 
                 float3 IBLDiffuseResult = KdLast * IBLDiffuse * Var_MainTex.rgb;
-                float3 IBLSpecularResult = IBLSpecular * (KdLast * envBRDF.r+envBRDF.g);
-                float3 IBLLight = IBLDiffuseResult + IBLSpecularResult;
+                float3 IBLSpecularResult = IBLSpecular * (KdLast * envBRDF.x+envBRDF.y);
+                float3 IBLLight = (IBLDiffuseResult + IBLSpecularResult) * Var_Ao;
                 
                 float3 finalColor = InDirectorLight + IBLLight;
                 
                 return float4(finalColor,1);
-                return Var_MainTex;
-                
             }
             ENDHLSL
         }
