@@ -76,7 +76,7 @@ Shader "Unlit/GlassUPR"
                 Varing o;
                 VertexPositionInputs PosInput = GetVertexPositionInputs(v.vertex.xyz);
                 o.vertex = PosInput.positionCS;
-                o.ScrPos = PosInput.positionNDC;
+                o.ScrPos = PosInput.positionNDC;//NDC范围【0-w】，映射为【0-1】及为屏幕空间坐标
                 VertexNormalInputs NormalInput = GetVertexNormalInputs(v.normal);
                 o.NormalWS = NormalInput.normalWS;
                 o.uv = TRANSFORM_TEX(v.uv, _NormalTex);//uv的获取方式不变
