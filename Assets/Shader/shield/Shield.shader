@@ -54,6 +54,12 @@ Shader "Unlit/URPTemplateShader"
         real _VertexOffsetScale;
         real _TessellationFactor;
         CBUFFER_END
+
+        real _MaxHitPoint;
+        real _HitDistance;
+        real4 _HitPoints;
+        real _WaveIntensity;
+        real _WaveRange;
         
         //新的采样函数和采样器，替代 CG中的 Sample2D
         TEXTURE2D(_NormalTex);
@@ -93,7 +99,7 @@ Shader "Unlit/URPTemplateShader"
             float3 BTangentWS   : TEXCOORD6;
             float4 ScrPos       : TEXCOORD7;
             float2 NoiseUV      : TEXCOORD8;
-            float4 temp         : TEXCOORD9;
+            float   temp         : TEXCOORD9;
         };
         struct PatchTess
         {
@@ -113,7 +119,7 @@ Shader "Unlit/URPTemplateShader"
 
         Pass
         {
-            //Blend SrcAlpha OneMinusSrcAlpha
+            Blend SrcAlpha OneMinusSrcAlpha
             Tags{"LightMode"="UniversalForward"}
             HLSLPROGRAM
             #pragma target 4.6 
@@ -127,7 +133,7 @@ Shader "Unlit/URPTemplateShader"
                 
                 Varing o;
                 float2 VertexOffsetUV = v.uv + _VertexOffsetTex_ST.xy + _VertexOffsetTex_ST.zw;
-                float Vertexoffset = SAMPLE_TEXTURE2D_LOD(_VertexOffsetTex,sampler_VertexOffsetTex,_Time.x * VertexOffsetUV,0).r;
+                float Vertexoffset = SAMPLE_TEXTURE2D_LOD(_VertexOffsetTex,sampler_VertexOffsetTex,frac(_Time.x * VertexOffsetUV),0).r;
                 v.vertex.xyz += v.normal * _VertexOffsetScale * Vertexoffset;
                 o.vertex = TransformObjectToHClip(v.vertex.xyz);
                 //CG中的顶点转换空间：o.vertex = UnityObjectToClipPos(v.vertex);
@@ -142,6 +148,7 @@ Shader "Unlit/URPTemplateShader"
                 o.uv.xy = TRANSFORM_TEX(v.uv.xy, _MainTex);//uv的获取方式不变
                 o.uv.zw = TRANSFORM_TEX(v.uv.xy,_NormalTex);
                 o.NoiseUV = v.uv * _Noise_ST.xy + frac(_Noise_ST.zw + _Time.x * _NoiseSpeed);
+                //o.temp = temp;
                 return o;
             }
 
@@ -206,18 +213,18 @@ Shader "Unlit/URPTemplateShader"
                 
 
                 float offset = SAMPLE_TEXTURE2D(_NoiseTex,sampler_NoiseTex,i.uv).r;
-                float4 bumpColor1 = SAMPLE_TEXTURE2D(_NoiseTex,sampler_NoiseTex,i.NoiseUV+offset + float2(_NoiseSpeed * _Time.x,0));
-                float4 bumpColor2 = SAMPLE_TEXTURE2D(_NoiseTex,sampler_NoiseTex,i.NoiseUV+offset - float2(0,_NoiseSpeed * _Time.x));
+                float4 bumpColor1 = SAMPLE_TEXTURE2D(_NoiseTex,sampler_NoiseTex,i.NoiseUV+offset + frac(float2(_NoiseSpeed * _Time.x,0)));
+                float4 bumpColor2 = SAMPLE_TEXTURE2D(_NoiseTex,sampler_NoiseTex,i.NoiseUV+offset - frac(float2(0,_NoiseSpeed * _Time.x)));
                 float3 normal = UnpackNormal((bumpColor1+bumpColor2)/2);
-                
 
+                //float subTemp = 1 - i.temp;
                 
-                float RampscrPosX = scrPos.x + normal.x * _NormalScale ;
-                float RampscrPosY = scrPos.y + normal.y * _NormalScale ;
+                float RampscrPosX = scrPos.x + normal.x * _NormalScale;
+                float RampscrPosY = scrPos.y + normal.y * _NormalScale;
                 
                 float4 var_ScrTex = SAMPLE_TEXTURE2D(_CameraColorTexture,sampler_CameraColorTexture,float2(RampscrPosX,RampscrPosY));
                 float4 var_mainTex = SAMPLE_TEXTURE2D(_MainTex,sampler_MainTex,float2(RampscrPosX,RampscrPosY)) * _EmissiveColor;
-                float3 scrColor = var_mainTex.rgb * var_ScrTex + Fresnal*_FresnalColor;
+                float3 scrColor = var_mainTex.rgb * var_ScrTex + Fresnal*_EdgeColor;
                 float3 finalColor = lerp(_EdgeColor,scrColor,diff);
                 return float4 (finalColor,var_mainTex.a);
             }
