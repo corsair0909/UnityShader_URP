@@ -57,6 +57,7 @@ Shader "Unlit/GlassUPR"
             //float3 WorldPos     : TEXCOORD4;
             float4 TangentWS    : TEXCOORD5;
             float3 BTangentWS   : TEXCOORD6;
+            float4 ScrPos       : TEXCOORD7;
         };
         
         ENDHLSL
@@ -75,6 +76,7 @@ Shader "Unlit/GlassUPR"
                 Varing o;
                 VertexPositionInputs PosInput = GetVertexPositionInputs(v.vertex.xyz);
                 o.vertex = PosInput.positionCS;
+                o.ScrPos = PosInput.positionNDC;
                 VertexNormalInputs NormalInput = GetVertexNormalInputs(v.normal);
                 o.NormalWS = NormalInput.normalWS;
                 o.uv = TRANSFORM_TEX(v.uv, _NormalTex);//uv的获取方式不变
@@ -88,6 +90,7 @@ Shader "Unlit/GlassUPR"
             {
                 float4 Ndir = SAMPLE_TEXTURE2D(_NormalTex,sampler_NormalTex,i.uv);
                 Ndir.xyz = UnpackNormalScale(Ndir,_NormalScale);
+                float2 ScrUV = i.ScrPos.xy/i.ScrPos.w;
                 float2 offset = float2(0,0);
                 #ifdef _NORMAL_STAGE_WS_N
                     half3x3 TBN = half3x3(i.TangentWS.xyz,i.BTangentWS.xyz,i.NormalWS.xyz);
@@ -97,7 +100,7 @@ Shader "Unlit/GlassUPR"
                     offset = Ndir.xy * _OffsetScale * _CameraColorTexture_TexelSize;
                 #endif
 
-                float4 finalColor = SAMPLE_TEXTURE2D(_CameraColorTexture,sampler_CameraColorTexture, i.uv+offset);
+                float4 finalColor = SAMPLE_TEXTURE2D(_CameraColorTexture,sampler_CameraColorTexture, ScrUV+offset);
                 return float4 (finalColor.rgb,_Alpha);
             }
             ENDHLSL
