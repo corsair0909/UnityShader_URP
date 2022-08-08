@@ -46,7 +46,7 @@ public class PostProcessRenderFeature : ScriptableRendererFeature
             opaqueDes.depthBufferBits = 0;
             cmd.GetTemporaryRT(TempleColorTex.id,opaqueDes,passFilterMode); //申请临时图像
             Blit(cmd,passSource,TempleColorTex.Identifier(),passMat,passIndex);//source图像被pass处理完的结果存储到临时图像
-            Blit(cmd,TempleColorTex.Identifier(),passIndex);//从临时图像存储回source
+            Blit(cmd,TempleColorTex.Identifier(),passSource);//从临时图像存储回source
             context.ExecuteCommandBuffer(cmd);//执行命令
             //释放命令
             CommandBufferPool.Release(cmd);

@@ -2,7 +2,7 @@ Shader "PostProcessing/GrayTex"
 {
     Properties
     {
-       [HideInInspecaot] _MainTex ("Texture", 2D) = "white" {}
+       [HideInInspector] _MainTex ("Texture", 2D) = "white" {}
         _brightness ("Brightness",range(0,1)) = 1
         _Saturate ("Saturate",range(0,1)) = 1
         _contranst ("Contranst",range(-1,2))=1
@@ -20,9 +20,9 @@ Shader "PostProcessing/GrayTex"
         
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
         CBUFFER_START(UnityProperties)
-        real _brightness;
-        real _Saturate;
-        real _contranst;
+            real _brightness;
+            real _Saturate;
+            real _contranst;
         CBUFFER_END
         
         //新的采样函数和采样器，替代 CG中的 Sample2D
@@ -45,9 +45,6 @@ Shader "PostProcessing/GrayTex"
 
         Pass
         {
-            
-            Tags{"LightMode"="UniversalForward"}
-            
             HLSLPROGRAM
             
             #pragma vertex vert
