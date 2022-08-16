@@ -14,4 +14,5 @@ Unity的Sphere顶点数量较小，添加曲面细分着色器后再进行顶点
 URP管线不支持多Pass，不能使用GrabPass获取当前相机渲染的图像，同样需要在PipelineAsset中勾选CameraColorTexture选项，根据之前的Noise对图像采样UV添加偏移（改为透明物体效果更好）
 #### 优化  
 多Pass渲染背面，URP需要用到RenderFeature来插入一个Pass渲染背面（还没尝试）
+对中间图像部分添加通道分离
 
