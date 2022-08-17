@@ -29,8 +29,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: de640fe3d0db1804a85f9fc8f5cadab6, type: 3}
   m_Name: ForwardRenderer
   m_EditorClassIdentifier: 
-  m_RendererFeatures: []
-  m_RendererFeatureMap: 
+  m_RendererFeatures:
+  - {fileID: 1002343002776265652}
+  m_RendererFeatureMap: b4e3937fa609e90d
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
   xrSystemData: {fileID: 11400000, guid: 60e1133243b97e347b653163a8c01b64, type: 2}
   shaders:
@@ -59,6 +60,52 @@ MonoBehaviour:
   m_ShadowTransparentReceive: 1
   m_RenderingMode: 0
   m_AccurateGbufferNormals: 0
+--- !u!114 &1002343002776265652
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 59c4c8c864efb49a5b196fdb3d1585d9, type: 3}
+  m_Name: NewDepthOfView
+  m_EditorClassIdentifier: 
+  m_Active: 1
+  setting:
+    _material: {fileID: 2100000, guid: 5bb0f20a8778e4689bf3222aa0477ea3, type: 2}
+    PassName: Depth Of View
+    Event: 300
+    DowmSample: 2
+    LoopCount: 100
+    BlurSmooth: 0.5
+    Radius: 0.36
+    NearDistance: 1.4
+    FarDistance: 10
+--- !u!114 &1230459080217708650
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 59c4c8c864efb49a5b196fdb3d1585d9, type: 3}
+  m_Name: NewDepthOfView
+  m_EditorClassIdentifier: 
+  m_Active: 1
+  setting:
+    _material: {fileID: 2100000, guid: 5bb0f20a8778e4689bf3222aa0477ea3, type: 2}
+    PassName: Depth Of View
+    Event: 300
+    DowmSample: 2
+    LoopCount: 42
+    BlurSmooth: 0.272
+    Radius: 0.2
+    NearDistance: 5
+    FarDistance: 9
 --- !u!114 &5254203093710071837
 MonoBehaviour:
   m_ObjectHideFlags: 0

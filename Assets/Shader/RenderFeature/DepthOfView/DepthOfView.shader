@@ -1,4 +1,4 @@
-Shader "Unlit/URPTemplateShader"
+Shader "Unlit/Depth Of View"
 {
     Properties
     {
@@ -71,30 +71,26 @@ Shader "Unlit/URPTemplateShader"
 
             float4 frag (Varing i) : SV_Target
             {
-                float Angle = 2.3398;
-                float2x2 RotateMatrix = float2x2(cos(Angle),-sin(Angle),sin(Angle),cos(Angle));
-                float2 UvOffset = float2(_Radius,0);
-                float r;//每次旋转的半径
-                float2 uv;
-                float4 result;
-                for (int it = 1; it < _Loop; it++)
-                {
-                    r = sqrt(it); //
-                    UvOffset = mul(RotateMatrix,UvOffset);
-                    uv = i.uv + _MainTex_TexelSize.xy * UvOffset * r;
-                    result += SAMPLE_TEXTURE2D(_MainTex,sampler_MainTex,uv);
-                }
-                return result / _Loop-1;
+                 float Angle = 2.3398;
+                 float2x2 RotateMatrix = float2x2(cos(Angle),-sin(Angle),sin(Angle),cos(Angle));
+                 float2 UvOffset = float2(_Radius,0);
+                 float r;//每次旋转的半径
+                 float2 uv;
+                 float4 result = 0;
+                 for (int it = 1; it < _Loop; it++)
+                 {
+                     r = sqrt(it); //
+                     UvOffset = mul(RotateMatrix,UvOffset);
+                     uv = i.uv + _MainTex_TexelSize.xy * UvOffset * r;
+                     result += SAMPLE_TEXTURE2D(_MainTex,sampler_MainTex,uv);
+                 }
+                return result / _Loop;
+                //return float4(0,0,0,0);
             }
             ENDHLSL
         }
          Pass // 计算范围PASS
         {
-            Cull Off
-            ZTest Always
-            ZWrite Off
-            
-            Tags{"LightMode"="UniversalForward"}
             HLSLPROGRAM
             
             #pragma vertex vert
@@ -103,7 +99,7 @@ Shader "Unlit/URPTemplateShader"
             Varing vert (Attributes v)
             {
                 Varing o;
-                o.vertex = TransformObjectToHClip(v.vertex);
+                o.vertex = TransformObjectToHClip(v.vertex.xyz);
                 o.uv = v.uv;
                 return o;
             }
@@ -111,8 +107,8 @@ Shader "Unlit/URPTemplateShader"
             float4 frag (Varing i) : SV_Target
             {
                 float depth = Linear01Depth(SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture,sampler_CameraDepthTexture,i.uv).x,_ZBufferParams);
-                float4 var_MainTex = SAMPLE_TEXTURE2D(_MainTex,sampler_MainTex,i.uv);
-                float4 var_BlurTex = SAMPLE_TEXTURE2D(_BlurTex,sampler_BlurTex,i.uv);
+                float4 var_MainTex = SAMPLE_TEXTURE2D(_MainTex,sampler_MainTex,i.uv);//处理图
+                float4 var_BlurTex = SAMPLE_TEXTURE2D(_BlurTex,sampler_BlurTex,i.uv);//原图
                 _StartDis *= _ProjectionParams.w;
                 _EndDis *= _ProjectionParams.w;
                 // 近处模糊 depth越小越要模糊，_StartDis+_BlurSmooth处结束模糊，所以取反
@@ -120,7 +116,7 @@ Shader "Unlit/URPTemplateShader"
                 // 远处模糊 Depth越大越靠近模糊，累加结果得到景深结果
                 dis += smoothstep(_EndDis,saturate(_EndDis+_BlurSmooth),depth);
                 
-                float4 combine =lerp(var_MainTex,var_BlurTex,dis);//根据结果差值模糊和原图
+                float4 combine =lerp(var_BlurTex,var_MainTex,dis);//根据结果差值模糊和原图
                 return combine;
             }
             ENDHLSL

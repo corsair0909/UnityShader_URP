@@ -26,6 +26,6 @@ Material:
     m_Floats:
     - _Saturate: 1
     - _brightness: 1
-    - _contranst: 0.88
+    - _contranst: 1
     m_Colors: []
   m_BuildTextureStacks: []

@@ -214,7 +214,7 @@ Shader "Unlit/PBR"
 
         Pass
         {
-            
+            ZWrite On
             Tags{"LightMode"="UniversalForward"}
             HLSLPROGRAM
             
