@@ -20,7 +20,7 @@ Material:
     serializedVersion: 3
     m_TexEnvs:
     - _AOTex:
-        m_Texture: {fileID: 2800000, guid: 0ad2676e72931c9428fea50394d358f4, type: 3}
+        m_Texture: {fileID: 2800000, guid: e2d3ffb9e0c5b7a4d95d18b01f2c27e1, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _LUT:
@@ -28,23 +28,23 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTex:
-        m_Texture: {fileID: 2800000, guid: 802701e4ffdf6b44890959e9fc44b4ff, type: 3}
+        m_Texture: {fileID: 2800000, guid: 0ca93b28d8c504946904487d0c1d581e, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MetalicTex:
-        m_Texture: {fileID: 2800000, guid: 8f230da24ef262747baee27cd5ef20ae, type: 3}
+        m_Texture: {fileID: 2800000, guid: cf17bce15458a584ba4c432acf10f1ec, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _NormalTex:
-        m_Texture: {fileID: 2800000, guid: d7c79101febab9d40a01bdc71adc4492, type: 3}
+        m_Texture: {fileID: 2800000, guid: a5798ba7ff8d7984c9b50981d6dd8e6b, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _SkyBox:
-        m_Texture: {fileID: 8900000, guid: ae33b74d80bcb4afaaf41aa66321a6d8, type: 3}
+        m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Floats:
-    - _Metalic: 1
+    - _Metalic: 0.7
     - _NormalScale: 1
     - _Smoothness: 0
     m_Colors:
