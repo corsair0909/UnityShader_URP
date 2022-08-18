@@ -16,3 +16,6 @@ URP管线不支持多Pass，不能使用GrabPass获取当前相机渲染的图�
 多Pass渲染背面，URP需要用到RenderFeature来插入一个Pass渲染背面（还没尝试）
 对中间图像部分添加通道分离
 
+## [PBR](https://github.com/corsair0909/UnityShader_URP/tree/main/Assets/Shader/PBR)
+<img width="1284" alt="截屏2022-08-17 13 01 02" src="https://user-images.githubusercontent.com/49482455/185303475-f1f7cd66-41e4-4046-a0ae-e80afdd0d893.png">
+
